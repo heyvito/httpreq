@@ -165,6 +165,22 @@ type RequestOptions struct {
 	// (dial / request / redirects) may take.
 	RequestTimeout time.Duration
 
+	// ResponseHeaderTimeout, if non-zero, specifies the amount of time to
+	// wait for a server's response headers after fully writing the
+	// request (including its body, if any). Zero means no timeout.
+	ResponseHeaderTimeout time.Duration
+
+	// ExpectContinueTimeout, if non-zero, specifies the amount of time to
+	// wait for a server's first response headers after fully writing the
+	// request headers if the request has an "Expect: 100-continue"
+	// header. Zero means no timeout.
+	ExpectContinueTimeout time.Duration
+
+	// MaxResponseHeaderBytes specifies a limit on how many response bytes
+	// are allowed in the server's response header. Zero means the
+	// default value provided by the default http.Client is used (10MB).
+	MaxResponseHeaderBytes int64
+
 	// HTTPClient can be provided to supply a custom HTTP client;
 	// this is useful for using an OAuth client with the request.
 	HTTPClient *http.Client
@@ -259,6 +275,9 @@ func (ro RequestOptions) needsCustomHTTPClient() bool {
 		len(ro.Cookies) != 0 ||
 		ro.UseCookieJar ||
 		ro.RequestTimeout != 0 ||
+		ro.ResponseHeaderTimeout != 0 ||
+		ro.ExpectContinueTimeout != 0 ||
+		ro.MaxResponseHeaderBytes != 0 ||
 		ro.LocalAddr != nil ||
 		ro.tracingEnabled()
 }
@@ -570,7 +589,10 @@ func createHTTPTransport(ro RequestOptions) *http.Transport {
 			KeepAlive: ro.DialKeepAlive,
 			LocalAddr: ro.LocalAddr,
 		}).DialContext,
-		TLSHandshakeTimeout: ro.TLSHandshakeTimeout,
+		TLSHandshakeTimeout:    ro.TLSHandshakeTimeout,
+		ResponseHeaderTimeout:  ro.ResponseHeaderTimeout,
+		ExpectContinueTimeout:  ro.ExpectContinueTimeout,
+		MaxResponseHeaderBytes: ro.MaxResponseHeaderBytes,
 
 		TLSClientConfig:    &tls.Config{InsecureSkipVerify: ro.InsecureSkipVerify},
 		DisableCompression: ro.DisableCompression,
